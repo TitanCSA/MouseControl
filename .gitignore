@@ -1,0 +1,8 @@
+/obj/
+/dist/
+/InterceptorSetup.exe
+/.vs/
+*.user
+*.pdb
+*.ilk
+*.log
