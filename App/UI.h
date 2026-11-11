@@ -22,7 +22,7 @@ class Window {
     bool offline_ = false, codeView_ = false, changing_ = false, paused_ = false, tracking_ = false,
          animate_ = true;
     float width_ = 1320, height_ = 860, scale_ = 1, hoverMix_ = 0, phase_ = 0;
-    int selected_ = 1, scroll_ = 0, hover_ = 0;
+    int selected_ = 1, scroll_ = 0, hover_ = 0, pressed_ = 0;
     std::uint64_t recorded_ = 0;
     std::wstring notice_, codeError_;
     void Changed(bool refreshCode = true);

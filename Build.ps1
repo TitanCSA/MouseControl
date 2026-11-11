@@ -49,7 +49,7 @@ try{
   Add-Type -AssemblyName System.IO.Compression
   $files=[ordered]@{'MouseControl.exe'=$exe;'InterceptorSetup.exe'=$installer;'README.txt'=(Join-Path $root 'docs\QUICKSTART.txt');'LICENSE'=(Join-Path $root 'LICENSE');'INTERCEPTOR-LICENSE.txt'=(Join-Path $root 'Interceptor\LICENSE');'DRIVER-LICENSE.txt'=(Join-Path $root 'Interceptor\BINARY-LICENSE.txt')}
   $out=Join-Path $root 'dist';New-Item -ItemType Directory -Force $out|Out-Null
-  $zipPath=Join-Path $out 'MouseControl-1.0.0-Windows-x64.zip'
+  $zipPath=Join-Path $out 'MouseControl-1.0.1-Windows-x64.zip'
   $stream=[IO.File]::Open($zipPath,[IO.FileMode]::Create)
   try{
    $zip=[IO.Compression.ZipArchive]::new($stream,[IO.Compression.ZipArchiveMode]::Create,$true)

@@ -1,4 +1,4 @@
-# Validation — 1.0.0
+# Validation — 1.0.1
 
 Validated on Windows 10 x64 (19045), MSVC C++17, with warnings treated as errors.
 
@@ -6,7 +6,7 @@ Validated on Windows 10 x64 (19045), MSVC C++17, with warnings treated as errors
 |---|---|
 | Parser and deterministic scheduler | 110,072 assertions, including 100,000 trigger/timing iterations and 10,000 bounded parser inputs |
 | Capture worker with isolated transport | 23 checks: original input forwarding, same-mouse routing, release cancellation, pause/resume, foreground exclusion, send failure cleanup and key recording |
-| Actual hidden native UI | 39 checks: visual/code round trip, invalid code, fields, trigger toggles, step ordering and hit targets |
+| Actual hidden native UI | 41 checks: visual/code round trip, invalid code, fields, trigger toggles, step ordering and hit targets |
 | AddressSanitizer | All three suites passed |
 | Packaging | Static C++ runtime; explicit ZIP whitelist; no kernel source, PDBs, credentials or sanitizer runtime |
 | Driver installer | Exact SHA-256 match with the official Keyboard & Mouse 1.0.5.0 GitHub release |

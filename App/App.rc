@@ -1,8 +1,8 @@
 #include <windows.h>
 101 ICON "MouseControl.ico"
 1 VERSIONINFO
- FILEVERSION 1,0,0,0
- PRODUCTVERSION 1,0,0,0
+ FILEVERSION 1,0,1,0
+ PRODUCTVERSION 1,0,1,0
  FILEOS VOS_NT_WINDOWS32
  FILETYPE VFT_APP
 BEGIN
@@ -12,9 +12,9 @@ BEGIN
   BEGIN
    VALUE "CompanyName", "TitanCSA\0"
    VALUE "FileDescription", "MouseControl - mouse movement sequences\0"
-   VALUE "FileVersion", "1.0.0.0\0"
+   VALUE "FileVersion", "1.0.1.0\0"
    VALUE "ProductName", "MouseControl\0"
-   VALUE "ProductVersion", "1.0.0.0\0"
+   VALUE "ProductVersion", "1.0.1.0\0"
   END
  END
  BLOCK "VarFileInfo"

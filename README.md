@@ -11,7 +11,7 @@ A small, native C++ Windows app built with the **[Interceptor Keyboard & Mouse](
 
 ## Start in three steps
 
-1. Download and extract **MouseControl-1.0.0-Windows-x64.zip**.
+1. Download and extract **MouseControl-1.0.1-Windows-x64.zip**.
 2. Run the included **InterceptorSetup.exe**, select **Install / reinstall**, and use Windows **Restart** if requested. Use this Keyboard & Mouse edition, rather than an overlapping combined Interceptor installation.
 3. Open **MouseControl.exe** and accept the administrator prompt. It starts ready. Click outside the MouseControl window, then hold **left mouse**.
 

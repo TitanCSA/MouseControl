@@ -205,6 +205,9 @@ void Engine::Run() {
             state.error = 0;
             state.paused = false;
             state.connected = true;
+            state.target = sources.size() == 1
+                               ? sources.front().name
+                               : L"Auto · " + std::to_wstring(sources.size()) + L" physical mice";
             state.title = L"Ready";
             state.detail.clear();
             Publish(state);

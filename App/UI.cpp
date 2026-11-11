@@ -753,8 +753,23 @@ LRESULT Window::Message(UINT message, WPARAM w, LPARAM l) {
             return TRUE;
         }
         break;
-    case WM_LBUTTONUP:
-        Action(Hit(GET_X_LPARAM(l) / scale_, GET_Y_LPARAM(l) / scale_));
+    case WM_LBUTTONDOWN:
+        pressed_ = Hit(GET_X_LPARAM(l) / scale_, GET_Y_LPARAM(l) / scale_);
+        if (pressed_)
+            SetCapture(window_);
+        return 0;
+    case WM_LBUTTONUP: {
+        const int hit = Hit(GET_X_LPARAM(l) / scale_, GET_Y_LPARAM(l) / scale_);
+        const int clicked = pressed_ && hit == pressed_ ? hit : 0;
+        pressed_ = 0;
+        if (GetCapture() == window_)
+            ReleaseCapture();
+        if (clicked)
+            Action(clicked);
+        return 0;
+    }
+    case WM_CAPTURECHANGED:
+        pressed_ = 0;
         return 0;
     case WM_MOUSEWHEEL:
         if (!codeView_) {
@@ -884,6 +899,14 @@ unsigned Window::SelfTest() {
         auto b = Box(id);
         expect(Hit(b.left + 3, b.top + 3) == id);
     }
+    const auto point = MAKELPARAM(static_cast<short>((Box(1).left + 5) * scale_),
+                                 static_cast<short>(40 * scale_));
+    Message(WM_LBUTTONUP, 0, point);
+    expect(!paused_); // A release without a matching press must never activate a button.
+    pressed_ = 1;
+    Message(WM_LBUTTONUP, 0, point);
+    expect(paused_);
+    Action(1);
     expect(Encode(Decode(Encode(settings_))) == Encode(settings_));
     Paint();
     return checks;

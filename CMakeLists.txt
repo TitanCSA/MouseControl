@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 cmake_policy(SET CMP0091 NEW)
-project(MouseControl VERSION 1.0.0 LANGUAGES CXX RC)
+project(MouseControl VERSION 1.0.1 LANGUAGES CXX RC)
 if(NOT WIN32 OR NOT MSVC OR NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
   message(FATAL_ERROR "Build with Visual Studio 2022 C++ tools on Windows x64.")
 endif()
