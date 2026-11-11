@@ -25,7 +25,7 @@ class Transport {
     virtual std::vector<Source> Open() = 0;
     virtual std::uint64_t Read(DWORD timeout, HANDLE wake,
                                const std::function<void(const Physical &)> &receive) = 0;
-    virtual void Send(const Movement &movement) = 0;
+    virtual bool Send(const Movement &movement) = 0; // False: capacity busy, nothing accepted.
     virtual void Close() noexcept = 0;
 };
 std::shared_ptr<Transport> DriverTransport();

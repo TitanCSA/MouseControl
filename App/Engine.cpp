@@ -80,18 +80,31 @@ class NativeTransport final : public Transport {
         }
         // Always forward the physical batch, even if a user-mode state update failed.
         const auto size = batch.size();
-        if (size)
-            Require(Send_Input(batch), size);
+        std::size_t forwarded = 0;
+        const auto deadline = GetTickCount64() + 250;
+        while (forwarded < size) {
+            const auto sent = Send_Input(batch);
+            forwarded += sent.accepted;
+            if (sent.error == ERROR_BUSY && forwarded < size && GetTickCount64() < deadline) {
+                SwitchToThread();
+                continue;
+            }
+            Require(sent, size - (forwarded - sent.accepted));
+        }
         if (failure)
             std::rethrow_exception(failure);
         return size;
     }
-    void Send(const Movement &movement) override {
+    bool Send(const Movement &movement) override {
         Interceptor::Mouse_Input packet{};
         packet.device = movement.device;
         packet.stroke.x = movement.x;
         packet.stroke.y = movement.y;
-        Require(Interceptor::Send_Input(packet), 1);
+        const auto sent = Interceptor::Send_Input(packet);
+        if (!sent.accepted && sent.error == ERROR_BUSY)
+            return false;
+        Require(sent, 1);
+        return true;
     }
     void Close() noexcept override {
         try {
@@ -104,7 +117,7 @@ std::wstring DriverHint(DWORD code) {
     if (code == ERROR_FILE_NOT_FOUND || code == ERROR_PATH_NOT_FOUND ||
         code == ERROR_SERVICE_DOES_NOT_EXIST)
         return L"Install Interceptor Keyboard & Mouse using Driver setup, restart if requested, "
-               L"then press Retry.";
+               L"then switch ON.";
     if (code == ERROR_EVALUATION_EXPIRATION)
         return L"The shared one-hour driver demo has expired. Use Windows Restart for a new "
                L"allowance, then reopen MouseControl.";
@@ -115,7 +128,7 @@ std::wstring DriverHint(DWORD code) {
         return L"Administrator rights are required. Reopen MouseControl and accept the Windows "
                L"administrator prompt.";
     return L"Close other capture applications. Check Driver setup > Diagnose, reconnect the device "
-           L"if necessary, then press Retry.";
+           L"if necessary, then switch ON.";
 }
 } // namespace
 std::shared_ptr<Transport> DriverTransport() {
@@ -189,7 +202,7 @@ void Engine::Run() {
             state.active = state.connected = false;
             state.recording = recording_;
             if (!state.error) {
-                state.title = L"Paused";
+                state.title = L"Remap OFF";
                 state.detail = L"Capture released. Physical input passes through normally.";
             }
             Publish(state);
@@ -200,6 +213,7 @@ void Engine::Run() {
             auto configured = std::atomic_load(&settings_);
             Scheduler scheduler(*configured);
             const auto sources = transport_->Open();
+            std::optional<Movement> pending;
             for (const auto &source : sources)
                 scheduler.Mouse(source.id, 0, 0);
             state.error = 0;
@@ -214,6 +228,7 @@ void Engine::Run() {
             while (desired_ && !stopping_) {
                 const auto next = std::atomic_load(&settings_);
                 if (next != configured) {
+                    pending.reset();
                     scheduler.Configure(*next);
                     configured = next;
                 }
@@ -221,10 +236,11 @@ void Engine::Run() {
                 const auto due = scheduler.Deadline();
                 const auto now = Clock();
                 const auto timeout =
-                    due ? static_cast<DWORD>(*due <= now ? 0
-                                                         : std::min<std::int64_t>(
-                                                               600000, (*due - now + 999) / 1000))
-                        : INFINITE;
+                    pending ? 0
+                    : due   ? static_cast<DWORD>(*due <= now ? 0
+                                                             : std::min<std::int64_t>(
+                                                                 600000, (*due - now + 999) / 1000))
+                            : INFINITE;
                 const bool before = state.active;
                 const auto beforeRecord = state.recordVersion;
                 state.physical += transport_->Read(timeout, wake_, [&](const Physical &input) {
@@ -245,13 +261,18 @@ void Engine::Run() {
                 // packet. No look-ahead queue of future movements is ever submitted to the driver.
                 const auto newest = std::atomic_load(&settings_);
                 if (newest != configured) {
+                    pending.reset();
                     scheduler.Configure(*newest);
                     configured = newest;
                 }
                 scheduler.Enable(desired_ && !stopping_ && !suspended_ && !recording_);
                 scheduler.Reconcile(Clock());
-                if (const auto movement = scheduler.Tick(Clock())) {
-                    transport_->Send(*movement);
+                if (!scheduler.Active())
+                    pending.reset();
+                if (!pending)
+                    pending = scheduler.Tick(Clock());
+                if (pending && transport_->Send(*pending)) {
+                    pending.reset();
                     ++state.movements;
                 }
                 state.active = scheduler.Active();

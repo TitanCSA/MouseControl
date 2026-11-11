@@ -28,7 +28,8 @@ class Fake final : public Transport {
 
   public:
     std::atomic<unsigned> opens{0}, closes{0}, forwarded{0}, sent{0}, afterRelease{0};
-    std::atomic<bool> released{false}, fail{false};
+    std::atomic<bool> released{false}, fail{false}, busy{false};
+    std::atomic<unsigned> busyAttempts{0};
     std::atomic<std::uint32_t> lastTarget{0};
     ~Fake() { CloseHandle(data_); }
     std::vector<Source> Open() override {
@@ -61,7 +62,11 @@ class Fake final : public Transport {
         }
         return events.size();
     }
-    void Send(const Movement &move) override {
+    bool Send(const Movement &move) override {
+        if (busy) {
+            ++busyAttempts;
+            return false;
+        }
         if (fail)
             throw std::system_error(ERROR_WRITE_FAULT, std::system_category(),
                                     "Isolated send failure");
@@ -69,6 +74,7 @@ class Fake final : public Transport {
             ++afterRelease;
         lastTarget = move.device;
         ++sent;
+        return true;
     }
     void Close() noexcept override { ++closes; }
 };
@@ -134,6 +140,22 @@ void Run() {
     Check(recording.Read().recorded == key.key);
     Check(second->sent == 0);
     recording.Stop();
+    auto congested = std::make_shared<Fake>();
+    congested->busy = true;
+    Engine pressure(congested);
+    pressure.Start(nullptr, {});
+    pressure.Suspended(false);
+    Until([&] { return pressure.Read().connected; });
+    congested->Push(Mouse(7, 1));
+    Until([&] { return congested->busyAttempts > 10; });
+    Check(congested->sent == 0);
+    congested->Push(Mouse(7, 0, 1));
+    Until([&] { return congested->forwarded == 2; });
+    congested->busy = false;
+    Sleep(30);
+    Check(congested->sent == 0 && congested->afterRelease == 0);
+    Check(!pressure.Read().error);
+    pressure.Stop();
 }
 } // namespace
 int main() {

@@ -156,17 +156,16 @@ std::string Script(const Program &p) {
     return out;
 }
 void Validate(const Settings &s) {
-    if (s.mouseButtons > 31 || s.keys.size() > 8 || (!s.mouseButtons && s.keys.empty()))
-        throw std::invalid_argument("Choose at least one trigger; at most eight keyboard keys.");
-    if (s.loopGapMs < 1 || s.loopGapMs > 1000)
-        throw std::invalid_argument("Loop gap must be 1 to 1000 ms.");
+    const auto &t = s.trigger;
+    if (t.kind == TriggerKind::Mouse) {
+        if (t.code < 1 || t.code > 5 || t.extended)
+            throw std::invalid_argument("Choose one mouse button.");
+    } else if (t.kind != TriggerKind::Keyboard || !t.code || t.code > 255 || t.extended > 6 ||
+               (t.extended & 1))
+        throw std::invalid_argument("Choose one valid keyboard key.");
     if (s.program.start.size() > 64 || s.program.loop.size() > 64 ||
         (s.program.start.empty() && s.program.loop.empty()))
-        throw std::invalid_argument("Use 1 to 128 sequence steps, at most 64 per section.");
-    std::set<Key> seen;
-    for (const auto &k : s.keys)
-        if (!k.code || k.code > 255 || k.extended > 6 || (k.extended & 1) || !seen.insert(k).second)
-            throw std::invalid_argument("Invalid or duplicate keyboard trigger.");
+        throw std::invalid_argument("Use 1 to 128 steps, at most 64 per section.");
     for (const auto *section : {&s.program.start, &s.program.loop})
         for (const auto &step : *section) {
             if (step.operation == Operation::Wait) {
@@ -174,17 +173,23 @@ void Validate(const Settings &s) {
                     throw std::invalid_argument("Wait exceeds 600000 ms.");
             } else if (step.operation != Operation::Move || step.x < -1000000 || step.x > 1000000 ||
                        step.y < -1000000 || step.y > 1000000)
-                throw std::invalid_argument(
-                    "Invalid movement; maximum magnitude is 1000000 counts.");
+                throw std::invalid_argument("Movement must be -1000000 to 1000000 counts.");
         }
+    if (!s.program.loop.empty() &&
+        std::none_of(s.program.loop.begin(), s.program.loop.end(), [](const auto &step) {
+            return step.operation == Operation::Move || step.milliseconds > 0;
+        }))
+        throw std::invalid_argument(
+            "A loop needs a move() or a positive wait(); wait(0) alone does no work.");
+    if (!s.source.empty() && Script(Parse(s.source)) != Script(s.program))
+        throw std::invalid_argument("The source does not match the compiled sequence.");
 }
 std::string Encode(const Settings &s) {
     Validate(s);
-    std::string out = "MouseControl 1\nbuttons " + std::to_string(s.mouseButtons) + "\ngap " +
-                      std::to_string(s.loopGapMs) + "\n";
-    for (auto k : s.keys)
-        out += "key " + std::to_string(k.code) + " " + std::to_string(k.extended) + "\n";
-    return out + "sequence\n" + Script(s.program);
+    return std::string("MouseControl 2\ntrigger ") +
+           (s.trigger.kind == TriggerKind::Mouse ? "mouse " : "key ") +
+           std::to_string(s.trigger.code) + " " + std::to_string(s.trigger.extended) +
+           "\nsequence\n" + (s.source.empty() ? Script(s.program) : s.source);
 }
 Settings Decode(const std::string &text) {
     if (text.size() > 20000)
@@ -192,43 +197,70 @@ Settings Decode(const std::string &text) {
     std::istringstream in(text);
     std::string line;
     std::getline(in, line);
-    if (line != "MouseControl 1")
+    if (!line.empty() && line.back() == '\r')
+        line.pop_back();
+    const bool legacy = line == "MouseControl 1";
+    if (!legacy && line != "MouseControl 2")
         throw std::invalid_argument("Unsupported MouseControl settings.");
     Settings s;
-    s.keys.clear();
-    bool buttons = false, gap = false, body = false;
+    bool body = false, trigger = false, buttons = false, gap = false;
+    unsigned oldButtons = 0;
+    std::vector<Key> oldKeys;
     while (std::getline(in, line)) {
+        if (!line.empty() && line.back() == '\r')
+            line.pop_back();
         if (line == "sequence") {
             body = true;
             break;
         }
         std::istringstream row(line);
-        std::string name, extra;
+        std::string name, kind, extra;
         unsigned a = 0, b = 0;
-        row >> name >> a;
-        if (!row)
-            throw std::invalid_argument("Invalid settings header.");
-        if (name == "buttons" && !buttons) {
-            if (a > 31)
-                throw std::invalid_argument("Invalid button mask.");
-            s.mouseButtons = static_cast<std::uint8_t>(a);
-            buttons = true;
-        } else if (name == "gap" && !gap) {
-            s.loopGapMs = a;
-            gap = true;
-        } else if (name == "key") {
-            if (!(row >> b) || a > 255 || b > 6 || s.keys.size() >= 8)
-                throw std::invalid_argument("Invalid key setting.");
-            s.keys.push_back({static_cast<std::uint16_t>(a), static_cast<std::uint16_t>(b)});
-        } else
-            throw std::invalid_argument("Unknown or duplicate settings header.");
+        row >> name;
+        if (!legacy) {
+            if (name != "trigger" || trigger || !(row >> kind >> a >> b) || a > 65535 || b > 65535)
+                throw std::invalid_argument("Expected one trigger.");
+            if (kind != "mouse" && kind != "key")
+                throw std::invalid_argument("Unknown trigger type.");
+            s.trigger = {kind == "mouse" ? TriggerKind::Mouse : TriggerKind::Keyboard,
+                         static_cast<std::uint16_t>(a), static_cast<std::uint16_t>(b)};
+            trigger = true;
+        } else {
+            if (!(row >> a))
+                throw std::invalid_argument("Invalid legacy preference.");
+            if (name == "buttons" && !buttons && a <= 31) {
+                oldButtons = a;
+                buttons = true;
+            } else if (name == "gap" && !gap && a <= 1000) {
+                gap = true;
+            } // Compatibility only: legacy pacing is deliberately discarded.
+            else if (name == "key" && oldKeys.size() < 8 && (row >> b) && a > 0 && a <= 255 &&
+                     b <= 6 && !(b & 1))
+                oldKeys.push_back({static_cast<std::uint16_t>(a), static_cast<std::uint16_t>(b)});
+            else
+                throw std::invalid_argument("Unknown or duplicate legacy preference.");
+        }
         if (row >> extra)
-            throw std::invalid_argument("Unexpected settings header data.");
+            throw std::invalid_argument("Unexpected preference data.");
     }
-    if (!buttons || !gap || !body)
-        throw std::invalid_argument("Incomplete settings file.");
-    std::string script((std::istreambuf_iterator<char>(in)), {});
-    s.program = Parse(script);
+    if (legacy) {
+        if (!buttons || !gap || (!oldButtons && oldKeys.empty()))
+            throw std::invalid_argument("Incomplete legacy preferences.");
+        if (oldButtons) {
+            unsigned button = 1;
+            while (!(oldButtons & 1)) {
+                oldButtons >>= 1;
+                ++button;
+            }
+            s.trigger = Trigger::Mouse(static_cast<std::uint16_t>(button));
+        } else
+            s.trigger = Trigger::Keyboard(oldKeys.front());
+    } else if (!trigger)
+        throw std::invalid_argument("The trigger is missing.");
+    if (!body)
+        throw std::invalid_argument("The sequence is missing.");
+    s.source = std::string((std::istreambuf_iterator<char>(in)), {});
+    s.program = Parse(s.source);
     Validate(s);
     return s;
 }
@@ -286,22 +318,21 @@ void Scheduler::Clear() noexcept {
     lastMouse_ = 0;
 }
 bool Scheduler::KeysHeld() const {
-    for (auto key : settings_.keys) {
-        bool held = false;
-        for (const auto &keyboard : keyboards_)
-            if (keyboard.second.count(key)) {
-                held = true;
-                break;
-            }
-        if (!held)
-            return false;
-    }
-    return true;
+    if (settings_.trigger.kind == TriggerKind::Mouse)
+        return true;
+    const Key key{settings_.trigger.code, settings_.trigger.extended};
+    for (const auto &keyboard : keyboards_)
+        if (keyboard.second.count(key))
+            return true;
+    return false;
 }
 bool Scheduler::Held(std::uint32_t id) const {
     const auto it = mice_.find(id);
-    return it != mice_.end() && (it->second & settings_.mouseButtons) == settings_.mouseButtons &&
-           KeysHeld();
+    if (it == mice_.end() || !KeysHeld())
+        return false;
+    const auto required =
+        settings_.trigger.kind == TriggerKind::Mouse ? 1u << (settings_.trigger.code - 1) : 0u;
+    return (it->second & required) == required;
 }
 void Scheduler::Reconcile(std::int64_t now) {
     if (!enabled_) {
@@ -315,7 +346,7 @@ void Scheduler::Reconcile(std::int64_t now) {
             return;
     }
     std::uint32_t target = 0;
-    if (settings_.mouseButtons) {
+    if (settings_.trigger.kind == TriggerKind::Mouse) {
         for (auto item : mice_)
             if (Held(item.first)) {
                 target = item.first;
@@ -351,7 +382,7 @@ std::optional<Movement> Scheduler::Tick(std::int64_t now) {
                 continue;
             }
             index_ = 0;
-            due_ = now + static_cast<std::int64_t>(settings_.loopGapMs) * 1000;
+            due_ = now;
             return {};
         }
         const auto step = steps[index_++];
@@ -364,7 +395,7 @@ std::optional<Movement> Scheduler::Tick(std::int64_t now) {
         // Script coordinates: negative Y means down, matching the requested move(-100).
         if (inLoop_ && index_ == steps.size()) {
             index_ = 0;
-            due_ = now + static_cast<std::int64_t>(settings_.loopGapMs) * 1000;
+            due_ = now;
         }
         return Movement{target_, step.x, -step.y};
     }

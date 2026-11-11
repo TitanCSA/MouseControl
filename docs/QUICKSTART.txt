@@ -1,28 +1,33 @@
-MouseControl 1.0.1 - Windows 10/11 x64
+MouseControl 1.1.0 - Windows 10/11 x64
 https://github.com/TitanCSA/MouseControl
 
 1. Extract the complete ZIP.
 2. Open InterceptorSetup.exe, choose Install / reinstall, and restart Windows
    only if requested. This is the Keyboard & Mouse edition.
 3. Open MouseControl.exe and accept administrator approval.
-4. Click outside its window and hold the left mouse button.
+4. Switch ON, click outside the window, and hold the left mouse button.
 
-Default: wait 30 ms, then repeat move(-100), with an 8 ms loop gap.
+Default: wait 30 ms, then repeat move(-100). No added delay between loop cycles.
 Negative vertical values move down. Counts are not guaranteed screen pixels.
-Release the trigger to stop. Click Pause, or use Ctrl+Alt+F12, to release capture.
+Release the trigger to stop. Switch OFF, or use Ctrl+Alt+F12, to release capture.
 Actions are suspended while the MouseControl window is active.
 
-Use Visual to change/add/reorder steps, or Code to edit the same sequence.
-Select multiple trigger buttons/keys to require all of them together.
-Settings save automatically; there is no Apply button.
+Edit the code directly. Enter indents automatically; Tab / Shift+Tab changes
+indentation by four spaces. Indent formats indentation and preserves comments.
+Select just one mouse button or record one keyboard key as the trigger.
+Settings and code save automatically; there is no Apply button or loop-gap field.
+Add an explicit wait(1ms), or another wait, when you want paced repetition.
+
+If the driver is unavailable, the switch returns OFF. Click the status banner
+for details, complete Driver setup if needed, then switch ON again.
 
 The Interceptor Keyboard & Mouse driver demo allows one hour per Windows kernel
 boot, shared with other applications using that edition. Windows Restart begins
 a new allowance. For the full driver without this limit, add titancsa on Discord.
 
-Source, complete instructions and validation:
+Source, instructions and validation:
 https://github.com/TitanCSA/MouseControl
-Underlying driver and SDK:
+Driver and SDK:
 https://github.com/TitanCSA/Interceptor-Keyboard-Mouse
 
 Use only on computers you are authorized to control. Provided as-is.

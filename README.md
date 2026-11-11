@@ -1,6 +1,6 @@
 # MouseControl
 
-**Hold a keyboard/mouse trigger to add a movement sequence to your physical mouse. Release it to stop.**
+**Write a mouse movement sequence, choose one trigger, and switch ON. Release the trigger to stop.**
 
 A small, native C++ Windows app built with the **[Interceptor Keyboard & Mouse](https://github.com/TitanCSA/Interceptor-Keyboard-Mouse) demo driver**. Movements travel through the selected physical mouse's driver path; your normal mouse movement, clicks, wheel and keyboard input continue to pass through.
 
@@ -11,11 +11,11 @@ A small, native C++ Windows app built with the **[Interceptor Keyboard & Mouse](
 
 ## Start in three steps
 
-1. Download and extract **MouseControl-1.0.1-Windows-x64.zip**.
+1. Download and extract **MouseControl-1.1.0-Windows-x64.zip**.
 2. Run the included **InterceptorSetup.exe**, select **Install / reinstall**, and use Windows **Restart** if requested. Use this Keyboard & Mouse edition, rather than an overlapping combined Interceptor installation.
 3. Open **MouseControl.exe** and accept the administrator prompt. It starts ready. Click outside the MouseControl window, then hold **left mouse**.
 
-If the driver is missing, unavailable or expired, the app explains the problem. **Driver setup** opens the verified installer beside the app; **Retry** reconnects after setup. No driver is silently installed. Windows 10 1709+ / Windows 11 **x64** is required.
+If the driver is missing, unavailable or expired, the app explains the problem. **Driver setup** opens the verified installer beside the app; switch **ON** to connect after setup. No driver is silently installed. Windows 10 1709+ / Windows 11 **x64** is required.
 
 ## The default sequence
 
@@ -27,7 +27,7 @@ loop {
 }
 ```
 
-Hold left click: wait 30 ms, then repeatedly add downward mouse movement. Release left click: cancel the wait or the running loop. A new hold starts again from the beginning. The default **Loop gap is 8 ms**; set 1–1000 ms in the UI. An empty/busy loop never consumes a CPU core.
+Hold left click: wait 30 ms, then repeatedly add downward mouse movement. Release left click: cancel the wait or the running loop. A new hold starts again from the beginning. There is **no added loop gap (0 ms)**. Only explicit `wait()` commands pace the sequence. Without a wait, the loop sends as fast as the driver and Windows accept input; add `wait(1ms)` or another delay if you prefer paced execution.
 
 **Values are relative device counts, not guaranteed screen pixels.** Mouse sensitivity, pointer acceleration and application settings determine the visible distance. Script coordinates deliberately use **negative Y for down**, so `move(-100)` matches the default above.
 
@@ -39,18 +39,17 @@ Hold left click: wait 30 ms, then repeatedly add downward mouse movement. Releas
 | `wait(30ms)` or `wait(30)` | Wait 30 ms; release still cancels immediately. |
 | `loop { ... }` | Repeat while every trigger remains held. |
 
-Place one-time commands before the optional final `loop`. Comments start with `//`. Movement values are whole numbers from −1,000,000 to 1,000,000; waits are 0–600,000 ms. Each section supports up to 64 steps. Loop gap is added at the end of each cycle, after any explicit waits.
+Place one-time commands before the optional final `loop`. Comments start with `//`. Movement values are whole numbers from −1,000,000 to 1,000,000; waits are 0–600,000 ms. Each section supports up to 64 steps. Loops containing only `wait(0)` are rejected because they perform no work.
 
 ## Change the action
 
-- **Visual:** click a step, edit X/Y or its wait, add movements/waits, and use the arrow/delete buttons to arrange the sequence.
-- **Code:** edit the same sequence directly. Valid changes take effect automatically; invalid text shows a line error and leaves the last valid sequence in use. Switch between the two views at any time.
-- **Trigger:** select Left, Right, Middle, X1 and/or X2; add keyboard keys with **Keyboard key**, then press the key. Escape cancels recording; click a recorded key to remove it. All selected inputs are required together. For left + right, both buttons must be held **on the same mouse**.
-- **Pause:** use the top button or **Ctrl+Alt+F12**. Pausing/closing releases capture. Actions are suspended while MouseControl is the foreground window so you can edit safely.
+- **Code only:** edit the sequence directly. Enter automatically keeps indentation and adds four spaces after `{`; Tab / Shift+Tab indent or outdent. **Indent** tidies indentation without removing comments. Valid changes take effect automatically; invalid text shows an error and leaves the last valid sequence in use.
+- **One trigger:** select Left, Right, Middle, X1 or X2, or select **Use a keyboard key** and press one key. Selecting another trigger replaces the previous one. Escape cancels recording. Key recording needs the driver connected with the switch ON.
+- **ON / OFF:** the top switch or **Ctrl+Alt+F12** enables or disables remapping. OFF releases capture; physical input passes through. If connection fails, the switch returns OFF and the status banner explains why. There is no Retry button. Switch ON again after completing setup or fixing the error.
 
-With a mouse-button trigger, the added movements always use the mouse that satisfied the chord. With a keyboard-only trigger, move the intended mouse first: the last mouse seen by the capture is selected and remains fixed until release. No virtual replacement mouse is created.
+Actions are suspended while MouseControl is the foreground window so you can edit safely. After switching ON, press the trigger again. A mouse trigger always uses its originating mouse. For a keyboard trigger, move the intended mouse first: the last mouse seen by the capture is selected and remains fixed until release. No virtual replacement mouse is created.
 
-Settings save automatically to `%LOCALAPPDATA%\MouseControl\preferences.mcontrol`. Pressed keys are held only in memory for trigger matching; the app does not save a keyboard activity log. There are no application accounts, licensing requests or background updater.
+Settings save automatically to `%LOCALAPPDATA%\MouseControl\preferences.mcontrol`, including code indentation and comments. Old preferences migrate automatically to one trigger, discarding the former loop gap. Pressed keys are held only in memory for trigger matching; the app does not save a keyboard activity log. There are no application accounts, licensing requests or background updater.
 
 ## Driver demo and full version
 
@@ -95,7 +94,7 @@ Install Visual Studio 2022 **Desktop development with C++**, a Windows SDK, and 
 
 For the first sanitizer build, use `-AddressSanitizer -Target Build`, then test it. The bundled SDK consists of **Interceptor.cpp + Interceptor.h**. No DLL, Qt, Electron, Node.js, .NET or kernel build is needed. Packaging fetches only the pinned official driver installer if it is absent and verifies its SHA-256 before including it.
 
-Offline tests cover parsing, timing, multi-mouse/keyboard chords, release cancellation, physical forwarding, pause/focus, failure cleanup and the real UI. Preview without a driver with `MouseControl.exe --preview`.
+Offline tests cover parsing, indentation, zero-gap timing, single-trigger selection, release cancellation, capacity backpressure, physical forwarding, ON/OFF, focus, failure cleanup and the real UI. Preview without a driver with `MouseControl.exe --preview`.
 
 ## Responsible use
 

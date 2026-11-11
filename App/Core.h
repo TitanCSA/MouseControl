@@ -28,11 +28,17 @@ struct Key {
         return code == other.code && extended == other.extended;
     }
 };
+enum class TriggerKind { Mouse, Keyboard };
+struct Trigger {
+    TriggerKind kind = TriggerKind::Mouse;
+    std::uint16_t code = 1, extended = 0; // Mouse: 1..5. Keyboard: physical scan code.
+    static Trigger Mouse(std::uint16_t button) { return {TriggerKind::Mouse, button, 0}; }
+    static Trigger Keyboard(Key key) { return {TriggerKind::Keyboard, key.code, key.extended}; }
+};
 struct Settings {
     Program program;
-    std::uint8_t mouseButtons = 1; // Left, right, middle, X1, X2. All must be held on one mouse.
-    std::vector<Key> keys;         // AND, not OR; state comes from physical driver packets.
-    unsigned loopGapMs = 8;        // Bounded scheduler cadence; never busy-spin an empty loop.
+    Trigger trigger;
+    std::string source; // Preserve the user's indentation/comments across restarts.
 };
 Program Parse(const std::string &text);
 std::string Script(const Program &program);
