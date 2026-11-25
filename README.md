@@ -1,5 +1,11 @@
 # MouseControl
 
+<!-- simple-start:start -->
+Move the mouse while holding a key or button that you choose.
+
+**Start here.** Open the preview to see the editor before connecting it to the driver.
+<!-- simple-start:end -->
+
 > [!IMPORTANT]
 > **Contact TitanCSA**
 >
