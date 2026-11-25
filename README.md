@@ -3,7 +3,13 @@
 <!-- simple-start:start -->
 Move the mouse while holding a key or button that you choose.
 
-**Start here.** Open the preview to see the editor before connecting it to the driver.
+**Start here.** Extract the [Windows ZIP](https://github.com/TitanCSA/MouseControl/releases/latest). Open PowerShell in that folder and run the command below.
+
+```powershell
+.\MouseControl.exe --preview
+```
+
+The editor shows an offline preview. [See the first-run guide](https://titancsa.github.io/guides/first-run/#mouse).
 <!-- simple-start:end -->
 
 > [!IMPORTANT]
