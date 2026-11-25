@@ -1,5 +1,10 @@
 # MouseControl
 
+> [!IMPORTANT]
+> **Contact TitanCSA**
+>
+> On [Discord](https://discord.com/app), choose **Friends → Add Friend**, enter **`titancsa`** and send the project name. Ask about commercial licensing, integration or support for this project.
+
 **Write a mouse movement sequence, choose one trigger, and switch ON. Release the trigger to stop.**
 
 A small, native C++ Windows app built with the **[Interceptor Keyboard & Mouse](https://github.com/TitanCSA/Interceptor-Keyboard-Mouse) demo driver**. Movements travel through the selected physical mouse's driver path; your normal mouse movement, clicks, wheel and keyboard input continue to pass through.
