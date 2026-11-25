@@ -3,7 +3,11 @@
 <!-- simple-start:start -->
 Move the mouse while holding a key or button that you choose.
 
-**Start here.** Extract the [Windows ZIP](https://github.com/TitanCSA/MouseControl/releases/latest). Open PowerShell in that folder and run the command below.
+[First steps](#first-steps) · [Develop](#build-from-source) · [Maintain](https://github.com/TitanCSA/sdk-packages/blob/main/CONTRIBUTING.md)
+
+## First steps
+
+Extract the [Windows ZIP](https://github.com/TitanCSA/MouseControl/releases/latest). Open PowerShell in that folder and run the command below.
 
 ```powershell
 .\MouseControl.exe --preview
